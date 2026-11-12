@@ -27,3 +27,12 @@ python src/train_probe.py               # zero-shot baseline, linear probe, MLP 
 python src/train_probe.py --final       # once at the end: adds test fold
 ```
 CLAP uses its own preprocessing (48 kHz, 5 s, peak-normalised): `preprocess_for_clap` in `src/embed.py`.
+
+## Sound Lab app
+Install dependencies with `pip install -r requirements.txt`, then start the local app:
+```bash
+streamlit run app.py
+```
+Open the local URL Streamlit prints. Choose an audio clip (`.wav`, `.mp3`, `.flac`, `.ogg`, or `.m4a`), label it with one of the existing ESC-50 categories, and add it. The first added clip loads CLAP if its model files are not already cached. Added audio and embeddings are saved under `data/user_samples/` and are included in the training set when you run training.
+
+The app compares a fresh CLAP logistic-regression probe with and without the added clips on the existing fold 4 validation set. It does not change the official ESC-50 metadata, folds, feature caches, or test-fold scores. Results can be downloaded as CSV.
