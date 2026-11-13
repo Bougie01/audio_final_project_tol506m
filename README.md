@@ -101,7 +101,11 @@ Figures are in `runs/figures/`.
   This shows the text prompt, not the audio, is the weak point there.
 
 ## Own recordings (real-world test)
-Recordings go in `data/my_recordings/`, named by ESC-50 class, e.g. `door_wood_knock_01.wav`
+The easiest way to record is through the live demo itself (`python src/demo.py`). Record with the
+microphone, open **"Save this recording to our test set"**, pick the true class and click **Save recording**.
+That saves `data/my_recordings/<class>_<NN>.wav`, using the same microphone and pipeline as the live demo.
+Recordings from other apps (a phone's voice recorder, Windows Sound Recorder) also work: copy them
+into `data/my_recordings/`, named by ESC-50 class, e.g. `door_wood_knock_01.wav`
 or `keyboard_typing_2.m4a`. This folder is a **test set and is never trained on**. The Sound Lab's
 `data/user_samples/` is for training clips. `python src/eval_recordings.py` scores all three models
 on the recordings and compares them with the official test fold.

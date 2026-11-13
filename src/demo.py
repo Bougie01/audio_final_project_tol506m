@@ -7,6 +7,10 @@ Record from the microphone (or upload a file) and compare the top-5 predictions 
 Each model gets exactly its training preprocessing: cnn_features.prepare/logmel
 for the CNN and embed.preprocess_for_clap for CLAP.
 
+The app can also save the current recording to data/my_recordings/ as
+<class>_<NN>.wav: this is how we build our real-world test set with the same
+microphone and pipeline as the live demo (score it with eval_recordings.py).
+
 Usage (from the repo root):
   python src/demo.py               # opens the Gradio app (http://127.0.0.1:7860)
   python src/demo.py --selftest    # classify a few held-out test-fold clips, print timings
@@ -25,6 +29,22 @@ from train_cnn import SmallCNN
 
 ESC = Path("data/ESC-50-master")
 DEFAULT_CNN = Path("models/cnn_specaug_mixup_s1.pt")   # best validation seed
+RECORDINGS = Path("data/my_recordings")                 # real-world TEST set: never trained on
+
+
+def save_recording(sr, wave, category, folder=RECORDINGS):
+    """Save raw recorded audio as <category>_<NN>.wav (next free number). Returns the path."""
+    folder.mkdir(parents=True, exist_ok=True)
+    taken = {p.stem for p in folder.glob(f"{category}_*")}
+    n = 1
+    while f"{category}_{n:02d}" in taken:
+        n += 1
+    path = folder / f"{category}_{n:02d}.wav"
+    wave = np.asarray(wave)
+    if not np.issubdtype(wave.dtype, np.integer):          # float audio -> 16-bit PCM
+        wave = (np.clip(wave, -1, 1) * 32767).astype(np.int16)
+    sf.write(path, wave, sr, subtype="PCM_16")
+    return path
 
 
 class Models:
@@ -92,19 +112,37 @@ def launch(m):
         return cnn, probe, zs, (f"Input {len(wave) / sr:.1f} s at {sr} Hz, used as a 5 s clip. "
                                 f"CNN {cnn_ms:.0f} ms, CLAP {clap_ms:.0f} ms.")
 
-    gr.Interface(
-        fn=fn,
-        inputs=gr.Audio(sources=["microphone", "upload"], type="numpy", label="Sound (5 s is used)"),
-        outputs=[gr.Label(num_top_classes=5, label="Small CNN (from scratch, 1.2M params)"),
-                 gr.Label(num_top_classes=5, label="CLAP + linear probe"),
-                 gr.Label(num_top_classes=5, label="CLAP zero-shot"),
-                 gr.Textbox(label="Details")],
-        examples=[[str(p)] for p in m.test_examples(6, seed=1)],
-        title="What sound is this?",
-        description="Environmental sound classification on the 50 ESC-50 classes. "
-                    "Examples are held-out test-fold clips.",
-        flagging_mode="never",
-    ).launch()
+    def save(rec, category):
+        if rec is None:
+            return "Record a sound first."
+        if not category:
+            return "Pick which class this sound is first."
+        sr, wave = rec
+        path = save_recording(sr, wave, category)
+        total = len(list(RECORDINGS.glob("*.wav")))
+        return f"Saved {path.as_posix()} ({len(wave) / sr:.1f} s). {total} recordings in the test set."
+
+    with gr.Blocks(title="What sound is this?") as app:
+        gr.Markdown("# What sound is this?\nEnvironmental sound classification on the 50 ESC-50 "
+                    "classes. Record or upload a sound, then click **Classify**. "
+                    "Examples are held-out test-fold clips.")
+        with gr.Row():
+            with gr.Column():
+                audio = gr.Audio(sources=["microphone", "upload"], type="numpy", label="Sound (5 s is used)")
+                classify = gr.Button("Classify", variant="primary")
+                gr.Examples([[str(p)] for p in m.test_examples(6, seed=1)], inputs=audio)
+                with gr.Accordion("Save this recording to our test set (data/my_recordings/)", open=False):
+                    category = gr.Dropdown(sorted(m.classes), value=None, label="What sound is it really?")
+                    save_btn = gr.Button("Save recording")
+                    status = gr.Textbox(label="Saved", interactive=False)
+            with gr.Column():
+                outs = [gr.Label(num_top_classes=5, label="Small CNN (from scratch, 1.2M params)"),
+                        gr.Label(num_top_classes=5, label="CLAP + linear probe"),
+                        gr.Label(num_top_classes=5, label="CLAP zero-shot"),
+                        gr.Textbox(label="Details")]
+        classify.click(fn, inputs=audio, outputs=outs)
+        save_btn.click(save, inputs=[audio, category], outputs=status)
+    app.launch()
 
 
 if __name__ == "__main__":
