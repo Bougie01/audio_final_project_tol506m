@@ -4,6 +4,7 @@ scikit-learn
 librosa
 soundfile
 tqdm
+matplotlib
 torch
 transformers
 streamlit>=1.40

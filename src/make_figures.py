@@ -36,7 +36,7 @@ def results_overview():
     cnn = np.array([acc(f"cnn_mixup_s{s}") for s in (0, 1, 2)])
     rows = [("Majority class", acc("majority"), 0),
             ("MFCC + logistic regression", acc("mfcc_logreg"), 0),
-            ("CNN from scratch (mixup, 3 seeds)", cnn.mean(), cnn.std()),
+            ("CNN from scratch (mixup, 3 seeds)", cnn.mean(), cnn.std(ddof=1)),
             ("CLAP zero-shot (no training)", acc("clap_zeroshot"), 0),
             ("CLAP + linear probe", acc("clap_probe"), 0)]
     fig, ax = plt.subplots(figsize=(6.2, 2.4))

@@ -86,7 +86,7 @@ def main():
     for m in ("majority", "mfcc_logreg"):
         print(f"{m:<28}{score(y[te], preds[m])[0]:>10.3f}{score(y[te], preds[m])[1]:>10.3f}")
     ca, cf = np.array(cnn_scores).T
-    print(f"{'cnn_mixup (3 seeds)':<28}{ca.mean():>6.3f}±{ca.std():.3f}{cf.mean():>6.3f}±{cf.std():.3f}")
+    print(f"{'cnn_mixup (3 seeds)':<28}{ca.mean():>6.3f}±{ca.std(ddof=1):.3f}{cf.mean():>6.3f}±{cf.std(ddof=1):.3f}")
     for m in ("clap_zeroshot", "clap_probe"):
         print(f"{m:<28}{score(y[te], preds[m])[0]:>10.3f}{score(y[te], preds[m])[1]:>10.3f}")
 

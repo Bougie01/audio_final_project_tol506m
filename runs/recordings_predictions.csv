@@ -1,0 +1,24 @@
+file,true,seconds,CNN top1,CNN conf,CNN top3,CLAP probe top1,CLAP probe conf,CLAP probe top3,CLAP zero-shot top1,CLAP zero-shot conf,CLAP zero-shot top3
+clapping_01.wav,clapping,3.1,can_opening,0.803,can_opening; door_wood_knock; glass_breaking,water_drops,0.291,water_drops; can_opening; clapping,clapping,0.933,clapping; water_drops; can_opening
+coughing_01.wav,coughing,3.2,coughing,0.971,coughing; sneezing; door_wood_creaks,coughing,0.905,coughing; sneezing; drinking_sipping,coughing,0.907,coughing; sneezing; laughing
+coughing_02.wav,coughing,4.9,coughing,0.996,coughing; laughing; door_wood_creaks,coughing,0.898,coughing; sneezing; drinking_sipping,coughing,0.964,coughing; sneezing; laughing
+coughing_03.wav,coughing,8.3,mouse_click,0.924,mouse_click; keyboard_typing; clock_alarm,mouse_click,0.855,mouse_click; clock_alarm; clock_tick,mouse_click,0.868,mouse_click; clock_alarm; water_drops
+coughing_04.wav,coughing,2.3,dog,0.393,dog; sneezing; coughing,dog,0.486,dog; sneezing; drinking_sipping,dog,0.647,dog; sneezing; coughing
+coughing_05.wav,coughing,7.0,breathing,0.88,breathing; drinking_sipping; sneezing,breathing,0.611,breathing; snoring; drinking_sipping,breathing,0.884,breathing; snoring; laughing
+door_wood_creaks_01.wav,door_wood_creaks,6.7,rooster,0.431,rooster; cat; hen,door_wood_creaks,0.83,door_wood_creaks; hand_saw; water_drops,door_wood_creaks,0.859,door_wood_creaks; cow; chirping_birds
+door_wood_creaks_02.wav,door_wood_creaks,5.6,door_wood_creaks,0.892,door_wood_creaks; crying_baby; laughing,door_wood_creaks,0.907,door_wood_creaks; snoring; door_wood_knock,door_wood_creaks,0.973,door_wood_creaks; hen; frog
+door_wood_knock_01.wav,door_wood_knock,3.1,door_wood_knock,0.981,door_wood_knock; clapping; fireworks,door_wood_knock,0.775,door_wood_knock; rooster; footsteps,door_wood_knock,0.955,door_wood_knock; clapping; keyboard_typing
+door_wood_knock_02.wav,door_wood_knock,3.4,door_wood_knock,0.997,door_wood_knock; fireworks; thunderstorm,door_wood_knock,0.921,door_wood_knock; footsteps; rooster,door_wood_knock,0.993,door_wood_knock; door_wood_creaks; keyboard_typing
+door_wood_knock_03.wav,door_wood_knock,4.4,door_wood_knock,0.994,door_wood_knock; coughing; clapping,door_wood_knock,0.751,door_wood_knock; footsteps; keyboard_typing,door_wood_knock,0.974,door_wood_knock; keyboard_typing; car_horn
+drinking_sipping_01.wav,drinking_sipping,4.7,water_drops,0.469,water_drops; clock_tick; laughing,drinking_sipping,0.672,drinking_sipping; pouring_water; can_opening,drinking_sipping,0.656,drinking_sipping; can_opening; pouring_water
+footsteps_01.wav,footsteps,6.8,fireworks,0.313,fireworks; drinking_sipping; can_opening,footsteps,0.873,footsteps; engine; car_horn,footsteps,0.987,footsteps; door_wood_knock; clock_tick
+keyboard_typing_01.wav,keyboard_typing,11.5,keyboard_typing,0.705,keyboard_typing; door_wood_knock; drinking_sipping,keyboard_typing,0.624,keyboard_typing; mouse_click; drinking_sipping,keyboard_typing,0.971,keyboard_typing; mouse_click; crow
+keyboard_typing_02.wav,keyboard_typing,6.3,keyboard_typing,0.83,keyboard_typing; brushing_teeth; frog,keyboard_typing,0.496,keyboard_typing; mouse_click; rain,keyboard_typing,0.879,keyboard_typing; mouse_click; crow
+keyboard_typing_03.wav,keyboard_typing,8.5,keyboard_typing,0.385,keyboard_typing; brushing_teeth; mouse_click,keyboard_typing,0.409,keyboard_typing; mouse_click; crackling_fire,keyboard_typing,0.881,keyboard_typing; mouse_click; crackling_fire
+laughing_01.wav,laughing,2.2,laughing,0.972,laughing; coughing; door_wood_knock,laughing,0.916,laughing; coughing; engine,laughing,0.979,laughing; coughing; hen
+mouse_click_01.wav,mouse_click,3.6,keyboard_typing,0.286,keyboard_typing; mouse_click; door_wood_creaks,mouse_click,0.874,mouse_click; keyboard_typing; rooster,mouse_click,0.705,mouse_click; keyboard_typing; water_drops
+mouse_click_02.wav,mouse_click,2.5,mouse_click,0.397,mouse_click; keyboard_typing; crackling_fire,mouse_click,0.959,mouse_click; keyboard_typing; can_opening,mouse_click,0.954,mouse_click; keyboard_typing; water_drops
+pouring_water_01.wav,pouring_water,5.5,frog,0.163,frog; water_drops; chirping_birds,pouring_water,0.495,pouring_water; water_drops; drinking_sipping,pouring_water,0.82,pouring_water; water_drops; chirping_birds
+snoring_01.wav,snoring,7.3,breathing,0.404,breathing; snoring; fireworks,snoring,0.831,snoring; drinking_sipping; breathing,snoring,0.98,snoring; breathing; drinking_sipping
+water_drops_01.wav,water_drops,3.4,water_drops,0.17,water_drops; fireworks; keyboard_typing,mouse_click,0.73,mouse_click; clock_tick; water_drops,water_drops,0.275,water_drops; clock_tick; mouse_click
+wind_01.wav,wind,7.6,thunderstorm,0.632,thunderstorm; fireworks; cat,wind,0.244,wind; train; drinking_sipping,train,0.824,train; thunderstorm; wind

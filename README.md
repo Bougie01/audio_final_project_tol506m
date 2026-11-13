@@ -69,7 +69,7 @@ Model choices were made on validation (fold 4). Only the chosen variants were sc
 | MFCC mean+std + logistic regression (C=0.1) | 0.450 | 0.426 | 0.412 | 0.390 |
 | CNN from scratch, no augmentation (3 seeds) | 0.829 ± 0.010 | 0.822 ± 0.007 | – | – |
 | CNN + SpecAugment (3 seeds) | 0.838 ± 0.003 | 0.831 ± 0.004 | – | – |
-| CNN + SpecAugment + mixup (3 seeds) | **0.863 ± 0.007** | **0.862 ± 0.007** | **0.802 ± 0.004** | **0.788 ± 0.008** |
+| CNN + SpecAugment + mixup (3 seeds) | **0.863 ± 0.007** | **0.862 ± 0.007** | **0.802 ± 0.005** | **0.788 ± 0.009** |
 | CLAP zero-shot, prompt "the sound of a X" | 0.860 | 0.834 | – | – |
 | CLAP zero-shot, prompt "This is a sound of X." | 0.903 | 0.897 | 0.893 | 0.886 |
 | CLAP linear probe (C=10) | **0.983** | **0.983** | **0.963** | **0.961** |
@@ -143,3 +143,15 @@ One app with four tabs:
 | `src/eval_recordings.py` | Score all models on our own recordings |
 | `src/inference.py` | Loads the three trained models once and classifies a clip (shared by the app and scripts) |
 | `app.py` | Sound Lab: the Streamlit app (live demo, training clips, comparison, own recordings) |
+
+## Use of generative AI
+We used generative AI (Claude, by Anthropic, through Claude Code) as a coding and writing assistant during this
+project. It helped us:
+- build the user interface of the Sound Lab app (Streamlit) and the earlier Gradio demo;
+- write and debug the code for training and evaluating the models: the CNN and its augmentation runs, the CLAP
+  probes, the final test evaluation, the recordings scorer and the figures;
+- run the experiments on our laptop and summarise the results;
+- structure and format the report, including a first draft that we then rewrote in our own words.
+
+We chose the project and its question, recorded our own test clips, reviewed the code and results, and take full
+responsibility for the content of the code and the report.
