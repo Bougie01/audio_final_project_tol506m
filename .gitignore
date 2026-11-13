@@ -10,3 +10,6 @@ __pycache__/
 # saved models: only the checkpoint the demo uses is committed; the others are reproducible
 models/*.pt
 !models/cnn_specaug_mixup_s1.pt
+# training-clip audio may be third-party (e.g. Mixkit) and is not redistributed;
+# the Sound Lab only needs the embeddings in data/user_samples/samples.csv
+data/user_samples/*.wav

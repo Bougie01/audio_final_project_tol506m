@@ -119,7 +119,10 @@ One app with four tabs:
 - **🎙️ Classify:** record from the microphone, upload a clip, or pick a held-out test clip. Shows the
   top-5 of the CNN, CLAP probe and CLAP zero-shot side by side. Recordings can be saved to the test set.
 - **➕ Add training clips:** add labelled clips (`.wav`, `.mp3`, `.flac`, `.ogg`, `.m4a`) to
-  `data/user_samples/` (committed). They become extra training data for the CLAP probe.
+  `data/user_samples/`. They become extra training data for the CLAP probe. Only their CLAP embeddings
+  (`samples.csv`) are committed, not the audio. The three clips added so far (two dog barks, one rain and
+  thunderstorm) were downloaded from [Mixkit](https://mixkit.co/free-sound-effects/) under its free sound effects
+  licence and are not redistributed here.
 - **📊 Train & compare:** retrain the CLAP probe with and without the added clips. It is evaluated on
   ESC-50 fold 4 and on our own recordings. It does not change the official folds, caches or test-fold scores.
 - **🧪 My recordings:** listen to and delete test recordings, and score all three models on them,
@@ -143,6 +146,7 @@ One app with four tabs:
 | `src/eval_recordings.py` | Score all models on our own recordings |
 | `src/inference.py` | Loads the three trained models once and classifies a clip (shared by the app and scripts) |
 | `app.py` | Sound Lab: the Streamlit app (live demo, training clips, comparison, own recordings) |
+| `report/report.pdf` | The 2-page report (source: `report/report.html`) |
 
 ## Use of generative AI
 We used generative AI (Claude, by Anthropic, through Claude Code) as a coding and writing assistant during this
