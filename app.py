@@ -10,17 +10,31 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
-from embed import embed_audio, get_device, load_clap, preprocess_for_clap  # noqa: E402
 
 DATASET = ROOT / "data" / "ESC-50-master"
 CACHE = ROOT / "cache" / "esc50_clap.npz"
 SAMPLES = ROOT / "data" / "user_samples"
 MANIFEST = SAMPLES / "samples.csv"
+
+
+@st.cache_resource(show_spinner="Loading the CLAP audio model (first use only)…")
+def get_clap_runtime():
+    """Load the heavyweight encoder once and reuse it for every uploaded clip."""
+    from embed import get_device, load_clap
+
+    device = get_device()
+    model, extractor, _ = load_clap(device)
+    return model, extractor, device
+
+
+@st.cache_data(show_spinner=False)
+def load_base_data(path: str, modified: float):
+    """Cache the small precomputed embedding archive across Streamlit reruns."""
+    with np.load(path, allow_pickle=True) as archive:
+        return tuple(archive[key].copy() for key in ("emb", "y", "fold", "class_names"))
 
 
 def load_samples(names: list[str]) -> tuple[np.ndarray, np.ndarray]:
@@ -46,9 +60,8 @@ if not CACHE.exists() or not (DATASET / "meta" / "esc50.csv").exists():
     st.error("Project data or cached CLAP embeddings are missing. Follow the setup steps in README.md first.")
     st.stop()
 
-data = np.load(CACHE, allow_pickle=True)
-X, y, fold = data["emb"], data["y"], data["fold"]
-names = [str(name) for name in data["class_names"]]
+X, y, fold, class_names = load_base_data(str(CACHE), CACHE.stat().st_mtime)
+names = [str(name) for name in class_names]
 train_mask, val_mask = np.isin(fold, [1, 2, 3]), fold == 4
 saved_X, saved_y = load_samples(names)
 
@@ -62,13 +75,13 @@ with left:
         if st.button("Add to dataset", type="primary", use_container_width=True):
             try:
                 import librosa
+                from embed import embed_audio, preprocess_for_clap
+
                 audio, sr = librosa.load(io.BytesIO(upload.getvalue()), sr=None, mono=True)
                 wav = preprocess_for_clap(audio, sr)
                 with st.spinner("Loading CLAP and embedding this clip…"):
-                    device = get_device()
-                    model, extractor, _ = load_clap(device)
+                    model, extractor, device = get_clap_runtime()
                     emb = embed_audio(model, extractor, [wav], device)[0]
-                del model, extractor
                 SAMPLES.mkdir(parents=True, exist_ok=True)
                 safe_name = Path(upload.name).name
                 destination = SAMPLES / f"{int(time.time())}_{safe_name}"
@@ -108,6 +121,9 @@ st.subheader("Train and compare")
 st.write("The app trains a fresh logistic regression probe on ESC-50 folds 1–3, optionally including your added clips. It evaluates on the untouched fold 4 validation set.")
 if st.button("Run training", type="primary", disabled=len(saved_y) == 0, use_container_width=True):
     with st.spinner("Training probes and evaluating on validation data…"):
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.metrics import accuracy_score, f1_score
+
         baseline = LogisticRegression(C=10, max_iter=3000).fit(X[train_mask], y[train_mask])
         augmented = LogisticRegression(C=10, max_iter=3000).fit(
             np.concatenate([X[train_mask], saved_X]), np.concatenate([y[train_mask], saved_y]))
