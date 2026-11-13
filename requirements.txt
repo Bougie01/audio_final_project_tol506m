@@ -6,5 +6,4 @@ soundfile
 tqdm
 torch
 transformers
-streamlit
-gradio
+streamlit>=1.40

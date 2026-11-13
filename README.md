@@ -101,32 +101,29 @@ Figures are in `runs/figures/`.
   This shows the text prompt, not the audio, is the weak point there.
 
 ## Own recordings (real-world test)
-The easiest way to record is through the live demo itself (`python src/demo.py`). Record with the
-microphone, open **"Save this recording to our test set"**, pick the true class and click **Save recording**.
-That saves `data/my_recordings/<class>_<NN>.wav`, using the same microphone and pipeline as the live demo.
+The easiest way to record is in the app's **Classify** tab: record with the microphone, open
+**"Save this clip to my test set"**, pick the true class and click **Save to test set**. That saves
+`data/my_recordings/<class>_<NN>.wav`, using the same microphone and pipeline as the live demo.
 Recordings from other apps (a phone's voice recorder, Windows Sound Recorder) also work: copy them
 into `data/my_recordings/`, named by ESC-50 class, e.g. `door_wood_knock_01.wav`
-or `keyboard_typing_2.m4a`. This folder is a **test set and is never trained on**. The Sound Lab's
-`data/user_samples/` is for training clips. `python src/eval_recordings.py` scores all three models
-on the recordings and compares them with the official test fold.
+or `keyboard_typing_2.m4a`. This folder is a **test set and is never trained on**. The app's
+*Add training clips* tab saves to `data/user_samples/` instead. Score the recordings in the app's
+*My recordings* tab, or with `python src/eval_recordings.py`.
 
-## Demos
-
-**Live classifier** (microphone or file, all three models side by side):
+## Sound Lab app (live demo)
 ```bash
-python src/demo.py               # Gradio app at http://127.0.0.1:7860
-python src/demo.py --selftest    # quick check on held-out test-fold clips
+python -m streamlit run app.py          # opens http://localhost:8501
+python src/inference.py --selftest      # quick check of all three models on held-out test-fold clips
 ```
-
-**Sound Lab** (add your own labelled clips to the training set, retrain the CLAP probe, compare validation):
-```bash
-streamlit run app.py
-```
-Choose an audio clip (`.wav`, `.mp3`, `.flac`, `.ogg`, or `.m4a`), label it with one of the
-ESC-50 categories, and add it. Added audio and embeddings are saved under `data/user_samples/`
-(this folder is committed) and are included in the training set when you run training. The app
-compares a fresh CLAP logistic-regression probe with and without the added clips on fold 4. It
-does not change the official ESC-50 metadata, folds, feature caches, or test-fold scores.
+One app with four tabs:
+- **🎙️ Classify:** record from the microphone, upload a clip, or pick a held-out test clip. Shows the
+  top-5 of the CNN, CLAP probe and CLAP zero-shot side by side. Recordings can be saved to the test set.
+- **➕ Add training clips:** add labelled clips (`.wav`, `.mp3`, `.flac`, `.ogg`, `.m4a`) to
+  `data/user_samples/` (committed). They become extra training data for the CLAP probe.
+- **📊 Train & compare:** retrain the CLAP probe with and without the added clips. It is evaluated on
+  ESC-50 fold 4 and on our own recordings. It does not change the official folds, caches or test-fold scores.
+- **🧪 My recordings:** listen to and delete test recordings, and score all three models on them,
+  compared with the official test fold.
 
 ## Layout
 
@@ -144,5 +141,5 @@ does not change the official ESC-50 metadata, folds, feature caches, or test-fol
 | `src/evaluate.py` | Final test-fold evaluation and error analysis |
 | `src/make_figures.py` | Report figures |
 | `src/eval_recordings.py` | Score all models on our own recordings |
-| `src/demo.py` | Gradio live demo |
-| `app.py` | Streamlit Sound Lab |
+| `src/inference.py` | Loads the three trained models once and classifies a clip (shared by the app and scripts) |
+| `app.py` | Sound Lab: the Streamlit app (live demo, training clips, comparison, own recordings) |
