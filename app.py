@@ -10,17 +10,31 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
-from embed import embed_audio, get_device, load_clap, preprocess_for_clap  # noqa: E402
 
 DATASET = ROOT / "data" / "ESC-50-master"
 CACHE = ROOT / "cache" / "esc50_clap.npz"
 SAMPLES = ROOT / "data" / "user_samples"
 MANIFEST = SAMPLES / "samples.csv"
+
+
+@st.cache_resource(show_spinner="Loading the CLAP audio model (first use only)…")
+def get_clap_runtime():
+    """Load the heavyweight encoder once and reuse it for every uploaded clip."""
+    from embed import get_device, load_clap
+
+    device = get_device()
+    model, extractor, _ = load_clap(device)
+    return model, extractor, device
+
+
+@st.cache_data(show_spinner=False)
+def load_base_data(path: str, modified: float):
+    """Cache the small precomputed embedding archive across Streamlit reruns."""
+    with np.load(path, allow_pickle=True) as archive:
+        return tuple(archive[key].copy() for key in ("emb", "y", "fold", "class_names", "text_emb"))
 
 
 def load_samples(names: list[str]) -> tuple[np.ndarray, np.ndarray]:
@@ -31,14 +45,6 @@ def load_samples(names: list[str]) -> tuple[np.ndarray, np.ndarray]:
     if manifest.empty:
         return np.empty((0, 512), dtype=np.float32), np.empty(0, dtype=np.int64)
     return np.stack(manifest.embedding.apply(lambda x: np.fromstring(x, sep=" "))), manifest.target.to_numpy()
-
-
-@st.cache_resource(show_spinner=False)
-def get_clap():
-    """Load CLAP once per app session instead of on every added clip."""
-    device = get_device()
-    model, extractor, _ = load_clap(device)
-    return model, extractor, device
 
 
 def score(model, X, y):
@@ -54,9 +60,8 @@ if not CACHE.exists() or not (DATASET / "meta" / "esc50.csv").exists():
     st.error("Project data or cached CLAP embeddings are missing. Follow the setup steps in README.md first.")
     st.stop()
 
-data = np.load(CACHE, allow_pickle=True)
-X, y, fold = data["emb"], data["y"], data["fold"]
-names = [str(name) for name in data["class_names"]]
+X, y, fold, class_names, text_embeddings = load_base_data(str(CACHE), CACHE.stat().st_mtime)
+names = [str(name) for name in class_names]
 train_mask, val_mask = np.isin(fold, [1, 2, 3]), fold == 4
 saved_X, saved_y = load_samples(names)
 
@@ -67,13 +72,15 @@ with left:
     category = st.selectbox("What sound is it?", names, format_func=lambda n: n.replace("_", " "))
     if upload:
         st.audio(upload.getvalue())
-        if st.button("Add to dataset", type="primary", use_container_width=True):
+        if st.button("Add to dataset", type="primary", width="stretch"):
             try:
                 import librosa
+                from embed import embed_audio, preprocess_for_clap
+
                 audio, sr = librosa.load(io.BytesIO(upload.getvalue()), sr=None, mono=True)
                 wav = preprocess_for_clap(audio, sr)
                 with st.spinner("Loading CLAP and embedding this clip…"):
-                    model, extractor, device = get_clap()
+                    model, extractor, device = get_clap_runtime()
                     emb = embed_audio(model, extractor, [wav], device)[0]
                 SAMPLES.mkdir(parents=True, exist_ok=True)
                 safe_name = Path(upload.name).name
@@ -105,15 +112,18 @@ with right:
         manifest = pd.read_csv(MANIFEST)
         counts = manifest.category.value_counts().rename_axis("Category").reset_index(name="Clips")
         counts["Category"] = counts.Category.str.replace("_", " ")
-        st.dataframe(counts, hide_index=True, use_container_width=True, height=250)
+        st.dataframe(counts, hide_index=True, width="stretch", height=250)
     else:
         st.write("No custom clips yet. Added clips are saved in `data/user_samples/`.")
 
 st.divider()
 st.subheader("Train and compare")
 st.write("The app trains a fresh logistic regression probe on ESC-50 folds 1–3, optionally including your added clips. It evaluates on the untouched fold 4 validation set.")
-if st.button("Run training", type="primary", disabled=len(saved_y) == 0, use_container_width=True):
+if st.button("Run training", type="primary", disabled=len(saved_y) == 0, width="stretch"):
     with st.spinner("Training probes and evaluating on validation data…"):
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.metrics import accuracy_score, f1_score
+
         baseline = LogisticRegression(C=10, max_iter=3000).fit(X[train_mask], y[train_mask])
         augmented = LogisticRegression(C=10, max_iter=3000).fit(
             np.concatenate([X[train_mask], saved_X]), np.concatenate([y[train_mask], saved_y]))
@@ -129,7 +139,7 @@ if st.button("Run training", type="primary", disabled=len(saved_y) == 0, use_con
 
 if "results" in st.session_state:
     result = st.session_state["results"]
-    st.dataframe(result["results"].style.format({"Validation accuracy": "{:.1%}", "Macro F1": "{:.3f}"}), hide_index=True, use_container_width=True)
+    st.dataframe(result["results"].style.format({"Validation accuracy": "{:.1%}", "Macro F1": "{:.3f}"}), hide_index=True, width="stretch")
     base_acc = result["results"].iloc[0]["Validation accuracy"]
     add_acc = result["results"].iloc[1]["Validation accuracy"]
     delta = add_acc - base_acc
@@ -141,3 +151,50 @@ if "results" in st.session_state:
     st.download_button("Download results CSV", result["results"].to_csv(index=False), "sound_lab_results.csv", "text/csv")
 elif len(saved_y) == 0:
     st.caption("Add at least one labeled clip to enable training.")
+
+st.divider()
+st.subheader("Test a clip")
+st.write("Check whether a clip sounds like a dog, and whether it resembles one of the 50 ESC-50 categories.")
+test_file = st.file_uploader("Choose a clip to check", type=["wav", "mp3", "flac", "ogg", "m4a"], key="test_clip")
+if test_file:
+    st.audio(test_file.getvalue())
+    if st.button("Analyze clip", key="analyze_clip", type="primary"):
+        try:
+            import librosa
+            from embed import embed_audio, preprocess_for_clap
+
+            sound, sample_rate = librosa.load(io.BytesIO(test_file.getvalue()), sr=None, mono=True)
+            normalized = preprocess_for_clap(sound, sample_rate)
+            with st.spinner("Analyzing audio…"):
+                model, extractor, device = get_clap_runtime()
+                clip_embedding = embed_audio(model, extractor, [normalized], device)[0]
+            similarities = clip_embedding @ text_embeddings.T
+            best_idx = int(np.argmax(similarities))
+            dog_idx = names.index("dog") if "dog" in names else None
+            dog_score = float(similarities[dog_idx]) if dog_idx is not None else 0.0
+            other_score = float(np.max(np.delete(similarities, dog_idx))) if dog_idx is not None else 0.0
+            val_best_scores = np.max(X[val_mask] @ text_embeddings.T, axis=1)
+            threshold = float(np.percentile(val_best_scores, 5))
+            best_score = float(similarities[best_idx])
+            st.session_state["clip_check"] = {
+                "best": names[best_idx], "score": best_score,
+                "threshold": threshold, "looks_in_dataset": best_score >= threshold,
+                "dog_score": dog_score, "other_score": other_score,
+                "is_dog": dog_idx is not None and dog_score >= other_score,
+            }
+        except Exception as exc:
+            st.error(f"Could not analyze this audio file: {exc}")
+
+if "clip_check" in st.session_state:
+    check = st.session_state["clip_check"]
+    dog_col, match_col = st.columns(2)
+    with dog_col:
+        st.markdown("**Dog check**")
+        st.metric("Result", "Dog-like sound" if check["is_dog"] else "More like another class")
+        st.caption(f"Dog similarity {check['dog_score']:.3f} · best other-class similarity {check['other_score']:.3f}")
+    with match_col:
+        st.markdown("**ESC-50 match**")
+        st.metric("Closest category", check["best"].replace("_", " "))
+        st.metric("Dataset-like", "Yes" if check["looks_in_dataset"] else "Unclear / outside classes",
+                  help=f"Top text similarity {check['score']:.3f}; default cutoff {check['threshold']:.3f}.")
+        st.caption(f"Top similarity: {check['score']:.3f}. The cutoff is the 5th percentile of ESC-50 validation clips (fold 4). Similarity suggests a class match; it cannot verify that the audio file itself is from ESC-50.")
