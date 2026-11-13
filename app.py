@@ -30,11 +30,23 @@ def get_clap_runtime():
     return model, extractor, device
 
 
+@st.cache_resource(show_spinner="Loading the CNN model…")
+def get_cnn_runtime(checkpoint_path: str, modified: float):
+    import torch
+    from train_cnn import SmallCNN
+
+    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    model = SmallCNN(n_classes=len(checkpoint["classes"]))
+    model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
+    return model, checkpoint["mean"], checkpoint["std"], [str(c) for c in checkpoint["classes"]]
+
+
 @st.cache_data(show_spinner=False)
 def load_base_data(path: str, modified: float):
     """Cache the small precomputed embedding archive across Streamlit reruns."""
     with np.load(path, allow_pickle=True) as archive:
-        return tuple(archive[key].copy() for key in ("emb", "y", "fold", "class_names", "text_emb"))
+        return tuple(archive[key].copy() for key in ("emb", "y", "fold", "class_names"))
 
 
 def load_samples(names: list[str]) -> tuple[np.ndarray, np.ndarray]:
@@ -60,7 +72,7 @@ if not CACHE.exists() or not (DATASET / "meta" / "esc50.csv").exists():
     st.error("Project data or cached CLAP embeddings are missing. Follow the setup steps in README.md first.")
     st.stop()
 
-X, y, fold, class_names, text_embeddings = load_base_data(str(CACHE), CACHE.stat().st_mtime)
+X, y, fold, class_names = load_base_data(str(CACHE), CACHE.stat().st_mtime)
 names = [str(name) for name in class_names]
 train_mask, val_mask = np.isin(fold, [1, 2, 3]), fold == 4
 saved_X, saved_y = load_samples(names)
@@ -154,47 +166,63 @@ elif len(saved_y) == 0:
 
 st.divider()
 st.subheader("Test a clip")
-st.write("Check whether a clip sounds like a dog, and whether it resembles one of the 50 ESC-50 categories.")
+st.write("Upload one clip to compare the CNN and CLAP probe. Each model ranks the ESC-50 sound categories by its predicted probability.")
 test_file = st.file_uploader("Choose a clip to check", type=["wav", "mp3", "flac", "ogg", "m4a"], key="test_clip")
 if test_file:
     st.audio(test_file.getvalue())
     if st.button("Analyze clip", key="analyze_clip", type="primary"):
         try:
             import librosa
+            import torch
+            from cnn_features import logmel as cnn_logmel, prepare as prepare_for_cnn
             from embed import embed_audio, preprocess_for_clap
+            from sklearn.linear_model import LogisticRegression
 
             sound, sample_rate = librosa.load(io.BytesIO(test_file.getvalue()), sr=None, mono=True)
-            normalized = preprocess_for_clap(sound, sample_rate)
-            with st.spinner("Analyzing audio…"):
-                model, extractor, device = get_clap_runtime()
-                clip_embedding = embed_audio(model, extractor, [normalized], device)[0]
-            similarities = clip_embedding @ text_embeddings.T
-            best_idx = int(np.argmax(similarities))
-            dog_idx = names.index("dog") if "dog" in names else None
-            dog_score = float(similarities[dog_idx]) if dog_idx is not None else 0.0
-            other_score = float(np.max(np.delete(similarities, dog_idx))) if dog_idx is not None else 0.0
-            val_best_scores = np.max(X[val_mask] @ text_embeddings.T, axis=1)
-            threshold = float(np.percentile(val_best_scores, 5))
-            best_score = float(similarities[best_idx])
-            st.session_state["clip_check"] = {
-                "best": names[best_idx], "score": best_score,
-                "threshold": threshold, "looks_in_dataset": best_score >= threshold,
-                "dog_score": dog_score, "other_score": other_score,
-                "is_dog": dog_idx is not None and dog_score >= other_score,
+            cnn_path = ROOT / "models" / "cnn_specaug_mixup_s1.pt"
+            if not cnn_path.exists():
+                raise FileNotFoundError(f"CNN checkpoint is missing: {cnn_path}")
+            with st.spinner("Running both models…"):
+                cnn, mean, std, cnn_names = get_cnn_runtime(str(cnn_path), cnn_path.stat().st_mtime)
+                if cnn_names != names:
+                    raise ValueError("The CNN and CLAP cache use different class orders.")
+                cnn_input = (torch.from_numpy(cnn_logmel(prepare_for_cnn(sound, sample_rate))) - mean) / std
+                with torch.no_grad():
+                    cnn_probs = cnn(cnn_input[None, None]).softmax(-1)[0].numpy()
+
+                clap_model, extractor, device = get_clap_runtime()
+                clap_wave = preprocess_for_clap(sound, sample_rate)
+                clip_embedding = embed_audio(clap_model, extractor, [clap_wave], device)[0]
+                probe = LogisticRegression(C=10, max_iter=3000)
+                probe.fit(np.concatenate([X[train_mask], saved_X]), np.concatenate([y[train_mask], saved_y]))
+                clap_probs = probe.predict_proba(clip_embedding[None, :])[0]
+                clap_names = [names[int(i)] for i in probe.classes_]
+
+            def top_predictions(labels, probabilities):
+                order = np.argsort(probabilities)[::-1][:5]
+                return pd.DataFrame({
+                    "Sound category": [labels[i].replace("_", " ") for i in order],
+                    "Probability": [float(probabilities[i]) for i in order],
+                })
+
+            st.session_state["clip_predictions"] = {
+                "cnn": top_predictions(cnn_names, cnn_probs),
+                "clap": top_predictions(clap_names, clap_probs),
             }
         except Exception as exc:
             st.error(f"Could not analyze this audio file: {exc}")
 
-if "clip_check" in st.session_state:
-    check = st.session_state["clip_check"]
-    dog_col, match_col = st.columns(2)
-    with dog_col:
-        st.markdown("**Dog check**")
-        st.metric("Result", "Dog-like sound" if check["is_dog"] else "More like another class")
-        st.caption(f"Dog similarity {check['dog_score']:.3f} · best other-class similarity {check['other_score']:.3f}")
-    with match_col:
-        st.markdown("**ESC-50 match**")
-        st.metric("Closest category", check["best"].replace("_", " "))
-        st.metric("Dataset-like", "Yes" if check["looks_in_dataset"] else "Unclear / outside classes",
-                  help=f"Top text similarity {check['score']:.3f}; default cutoff {check['threshold']:.3f}.")
-        st.caption(f"Top similarity: {check['score']:.3f}. The cutoff is the 5th percentile of ESC-50 validation clips (fold 4). Similarity suggests a class match; it cannot verify that the audio file itself is from ESC-50.")
+if "clip_predictions" in st.session_state:
+    predictions = st.session_state["clip_predictions"]
+    cnn_col, clap_col = st.columns(2)
+    with cnn_col:
+        st.markdown("**CNN**")
+        st.metric("Top prediction", predictions["cnn"].iloc[0]["Sound category"],
+                  f"{predictions['cnn'].iloc[0]['Probability']:.1%}", delta_color="off")
+        st.dataframe(predictions["cnn"].style.format({"Probability": "{:.1%}"}), hide_index=True, width="stretch")
+    with clap_col:
+        st.markdown("**CLAP + linear probe**")
+        st.metric("Top prediction", predictions["clap"].iloc[0]["Sound category"],
+                  f"{predictions['clap'].iloc[0]['Probability']:.1%}", delta_color="off")
+        st.dataframe(predictions["clap"].style.format({"Probability": "{:.1%}"}), hide_index=True, width="stretch")
+    st.caption("Probabilities rank the 50 ESC-50 categories; the highest-probability category is each model’s guess. The CLAP probe includes your added labeled clips when available.")
