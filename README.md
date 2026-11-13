@@ -1,38 +1,111 @@
 # Learning from Sound: ESC-50 environmental sound classification
 
-## Setup
-```bash
-pip install -r requirements.txt
-python src/prepare_data.py            # downloads ESC-50 (~600 MB), caches features
-python src/prepare_data.py --limit 200  # quick pipeline test on a subset
-python src/baselines.py               # majority + MFCC/LogReg, evaluated on validation
-python src/baselines.py --final       # run once at the end: also evaluates the test fold
-```
-Runs are logged to `runs/results.csv`.
+Final project for Introduction to Deep Learning, Fall 2026.
+
+**Question:** How close does a small CNN trained from scratch on log-mel spectrograms get to
+a large pretrained audio model (CLAP), what does each cost in size and speed, and do they hold
+up on sounds recorded with our own microphone?
 
 ## Data
 ESC-50 (Piczak, 2015): 2000 five-second clips, 50 classes, 40 clips per class,
 5 predefined folds. Source: https://github.com/karolpiczak/ESC-50.
 Licence: dataset CC BY-NC 3.0; individual clips come from Freesound under their own CC licences.
-Splits: folds 1-3 train, fold 4 validation, fold 5 test. The folds keep clips from the same
-source recording together, so there is no leakage.
 
-## Preprocessing (src/audio.py, shared with the demo)
-Mono, 16 kHz, padded/cropped to 5 s, peak-normalised. Features: log-mel (64 bands) and MFCC mean+std.
+**Splits:** folds 1-3 train, fold 4 validation, fold 5 test. The folds keep clips from the same
+source recording together, so there is no leakage. All choices (C, augmentation, epochs) are made
+on validation; the test fold is only evaluated with `--final`.
 
-## Pretrained model: CLAP (frozen) + probes
+The ESC-50 files are not in this repository; `prepare_data.py` downloads them.
+
+## Setup
 ```bash
-python src/extract_embeddings.py        # downloads laion/clap-htsat-unfused, caches embeddings (slow step, once)
-python src/train_probe.py               # zero-shot baseline, linear probe, MLP head -> validation
-python src/train_probe.py --final       # once at the end: adds test fold
+pip install -r requirements.txt
 ```
-CLAP uses its own preprocessing (48 kHz, 5 s, peak-normalised): `preprocess_for_clap` in `src/embed.py`.
+All commands are run from the repository root.
 
-## Sound Lab app
-Install dependencies with `pip install -r requirements.txt`, then start the local app:
+## Reproduce
+```bash
+# 1. data + baselines
+python src/prepare_data.py              # downloads ESC-50 (~600 MB), caches 16 kHz MFCC/log-mel features
+python src/prepare_data.py --limit 200  # (optional) quick pipeline test on a subset
+python src/baselines.py                 # majority + MFCC/LogReg -> validation
+
+# 2. CNN from scratch
+python src/prepare_cnn_features.py      # caches 22.05 kHz, 128-band log-mels for the CNN
+python src/train_cnn.py --augment none          --seed 0   # ~7.5 min each on an RTX 3060 laptop GPU
+python src/train_cnn.py --augment specaug       --seed 0
+python src/train_cnn.py --augment specaug_mixup --seed 0   # repeat with --seed 1, 2
+
+# 3. pretrained CLAP (frozen)
+python src/extract_embeddings.py        # downloads laion/clap-htsat-unfused, caches embeddings (once)
+python src/train_probe.py               # zero-shot, linear probe, MLP head -> validation
+
+# 4. final numbers (once, at the end)
+python src/baselines.py --final
+python src/train_cnn.py --augment specaug_mixup --seed 1 --final
+python src/train_probe.py --final
+```
+Every run is appended to `runs/results.csv`. CNN learning curves go to `runs/curves/`, and
+checkpoints go to `models/`. Only `models/cnn_specaug_mixup_s1.pt`, the one the demo uses, is committed.
+
+## Preprocessing
+Each model has one preprocessing function, which training and the demo both use:
+- **MFCC baseline** (`src/audio.py`): mono, 16 kHz, 5 s, peak-normalised; MFCC mean+std.
+- **CNN** (`src/cnn_features.py`): mono, 22.05 kHz, 5 s (centre crop), peak-normalised; 128-band log-mel (128 x 216).
+- **CLAP** (`preprocess_for_clap` in `src/embed.py`): mono, 48 kHz, 5 s, peak-normalised.
+
+## Results (validation, fold 4)
+
+| Model | Val acc | Val macro-F1 | Test acc |
+|---|---|---|---|
+| Majority class | 0.020 | 0.001 | |
+| MFCC mean+std + logistic regression (C=0.1) | 0.450 | 0.426 | |
+| CNN from scratch, no augmentation (3 seeds) | 0.829 ± 0.010 | 0.822 ± 0.007 | |
+| CNN + SpecAugment (3 seeds) | 0.838 ± 0.003 | 0.831 ± 0.004 | |
+| CNN + SpecAugment + mixup (3 seeds) | **0.863 ± 0.007** | **0.862 ± 0.007** | |
+| CLAP zero-shot, prompt "the sound of a X" | 0.860 | 0.834 | |
+| CLAP zero-shot, prompt "This is a sound of X." | 0.903 | 0.897 | 0.893 |
+| CLAP linear probe (C=10) | **0.983** | **0.983** | 0.963 |
+| CLAP MLP head (3 seeds) | 0.976 ± 0.001 | 0.976 ± 0.001 | 0.961 ± 0.001 |
+
+± is the standard deviation over seeds 0, 1 and 2.
+- **CNN:** 1.19M parameters, ~7.5 min training, 25-35 ms CPU inference per clip.
+- **Augmentation:** mixup gives +3.4 points over no augmentation (all 3 mixup seeds beat all 3 no-augmentation seeds). SpecAugment alone is within noise.
+- **Zero-shot prompt:** the wording changes accuracy by 4 points.
+
+**Caveat:** CLAP's training data (LAION-Audio-630K) includes Freesound audio, and ESC-50 is cut from
+Freesound. Some ESC-50 clips may have been seen during CLAP pretraining, so the CLAP numbers may be optimistic.
+
+## Demos
+
+**Live classifier** (microphone or file, all three models side by side):
+```bash
+python src/demo.py               # Gradio app at http://127.0.0.1:7860
+python src/demo.py --selftest    # quick check on held-out test-fold clips
+```
+
+**Sound Lab** (add your own labelled clips to the training set, retrain the CLAP probe, compare validation):
 ```bash
 streamlit run app.py
 ```
-Open the local URL Streamlit prints. Choose an audio clip (`.wav`, `.mp3`, `.flac`, `.ogg`, or `.m4a`), label it with one of the existing ESC-50 categories, and add it. The first added clip loads CLAP if its model files are not already cached. Added audio and embeddings are saved under `data/user_samples/` and are included in the training set when you run training.
+Choose an audio clip (`.wav`, `.mp3`, `.flac`, `.ogg`, or `.m4a`), label it with one of the
+ESC-50 categories, and add it. Added audio and embeddings are saved under `data/user_samples/`
+(this folder is committed) and are included in the training set when you run training. The app
+compares a fresh CLAP logistic-regression probe with and without the added clips on fold 4. It
+does not change the official ESC-50 metadata, folds, feature caches, or test-fold scores.
 
-The app compares a fresh CLAP logistic-regression probe with and without the added clips on the existing fold 4 validation set. It does not change the official ESC-50 metadata, folds, feature caches, or test-fold scores. Results can be downloaded as CSV.
+## Layout
+
+| File | Purpose |
+|---|---|
+| `src/audio.py` | 16 kHz preprocessing + MFCC features (baseline) |
+| `src/prepare_data.py` | Download ESC-50, cache baseline features |
+| `src/baselines.py` | Majority + MFCC/LogReg; `log()` writes `runs/results.csv` |
+| `src/cnn_features.py` | CNN preprocessing (22.05 kHz log-mel) |
+| `src/prepare_cnn_features.py` | Cache CNN log-mels |
+| `src/train_cnn.py` | Small 2D CNN, SpecAugment / mixup, early stopping on validation |
+| `src/embed.py` | CLAP loading, preprocessing and embedding helpers |
+| `src/extract_embeddings.py` | Cache CLAP audio + text embeddings |
+| `src/train_probe.py` | CLAP zero-shot, linear probe, MLP head |
+| `src/demo.py` | Gradio live demo |
+| `app.py` | Streamlit Sound Lab |

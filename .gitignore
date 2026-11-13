@@ -1,5 +1,11 @@
-data/
+# ESC-50 and other downloaded data are never committed (see README for download steps)...
+data/*
+# ...but our own recordings are part of the hand-in
+!data/user_samples/
 cache/
 __pycache__/
 *.pyc
 .venv/
+# saved models: only the checkpoint the demo uses is committed; the others are reproducible
+models/*.pt
+!models/cnn_specaug_mixup_s1.pt

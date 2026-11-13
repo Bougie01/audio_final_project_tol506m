@@ -21,3 +21,13 @@ time,model,params,val_acc,val_macro_f1,test_acc,test_macro_f1
 2026-11-12 21:40:10,clap_mlp_probe,seed=0,0.9775,0.9775424836601309,0.96,0.9573169506791799
 2026-11-12 21:40:19,clap_mlp_probe,seed=1,0.975,0.9750424836601309,0.9625,0.9607869447374091
 2026-11-12 21:40:27,clap_mlp_probe,seed=2,0.975,0.9750326797385622,0.96,0.9579826571777036
+2026-11-09 07:19:54,cnn_none,seed=0 best_epoch=60 params=1185490 train_s=439 cpu_ms=34.5,0.8175,0.8140252647623086,,
+2026-11-09 07:28:16,cnn_specaug,seed=0 best_epoch=78 params=1185490 train_s=460 cpu_ms=35.3,0.84,0.8339954512291975,,
+2026-11-09 07:51:23,cnn_specaug_mixup,seed=0 best_epoch=76 params=1185490 train_s=433 cpu_ms=25.4,0.855,0.8542324067401466,,
+2026-11-09 07:59:45,cnn_none,seed=1 best_epoch=62 params=1185490 train_s=435 cpu_ms=26.2,0.835,0.8265306231809798,,
+2026-11-09 08:07:46,cnn_specaug,seed=1 best_epoch=60 params=1185490 train_s=441 cpu_ms=27.6,0.835,0.8269045437220831,,
+2026-11-09 08:15:51,cnn_specaug_mixup,seed=1 best_epoch=79 params=1185490 train_s=446 cpu_ms=23.5,0.8675,0.8663524024994612,,
+2026-11-09 08:23:55,cnn_none,seed=2 best_epoch=77 params=1185490 train_s=443 cpu_ms=26.6,0.835,0.8266048091914964,,
+2026-11-09 08:31:58,cnn_specaug,seed=2 best_epoch=76 params=1185490 train_s=442 cpu_ms=25.8,0.84,0.8329484622704437,,
+2026-11-09 22:29:22,cnn_specaug_mixup,seed=2 best_epoch=75 params=1185490 train_s=328 cpu_ms=66.0,0.8675,0.8664402462003082,,
+2026-11-09 22:32:00,clap_zeroshot,prompt='the sound of a X',0.86,0.8342056913188962,,

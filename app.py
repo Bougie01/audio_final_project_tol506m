@@ -33,6 +33,14 @@ def load_samples(names: list[str]) -> tuple[np.ndarray, np.ndarray]:
     return np.stack(manifest.embedding.apply(lambda x: np.fromstring(x, sep=" "))), manifest.target.to_numpy()
 
 
+@st.cache_resource(show_spinner=False)
+def get_clap():
+    """Load CLAP once per app session instead of on every added clip."""
+    device = get_device()
+    model, extractor, _ = load_clap(device)
+    return model, extractor, device
+
+
 def score(model, X, y):
     pred = model.predict(X)
     return float(accuracy_score(y, pred)), float(f1_score(y, pred, average="macro", zero_division=0))
@@ -65,10 +73,8 @@ with left:
                 audio, sr = librosa.load(io.BytesIO(upload.getvalue()), sr=None, mono=True)
                 wav = preprocess_for_clap(audio, sr)
                 with st.spinner("Loading CLAP and embedding this clip…"):
-                    device = get_device()
-                    model, extractor, _ = load_clap(device)
+                    model, extractor, device = get_clap()
                     emb = embed_audio(model, extractor, [wav], device)[0]
-                del model, extractor
                 SAMPLES.mkdir(parents=True, exist_ok=True)
                 safe_name = Path(upload.name).name
                 destination = SAMPLES / f"{int(time.time())}_{safe_name}"
@@ -133,5 +139,5 @@ if "results" in st.session_state:
     else:
         st.caption("Validation results are for comparison on ESC-50 fold 4. The official test fold remains untouched.")
     st.download_button("Download results CSV", result["results"].to_csv(index=False), "sound_lab_results.csv", "text/csv")
-elif not saved_y:
+elif len(saved_y) == 0:
     st.caption("Add at least one labeled clip to enable training.")
