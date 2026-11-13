@@ -1,0 +1,51 @@
+class,"CNN (mixup, seed 1)",CLAP probe,CLAP zero-shot,group
+dog,1.0,1.0,1.0,Animals
+rooster,1.0,1.0,1.0,Animals
+pig,0.375,0.75,0.75,Animals
+cow,0.875,1.0,1.0,Animals
+frog,1.0,1.0,1.0,Animals
+cat,0.75,1.0,1.0,Animals
+hen,0.25,1.0,0.375,Animals
+insects,0.875,1.0,0.125,Animals
+sheep,1.0,1.0,1.0,Animals
+crow,1.0,1.0,1.0,Animals
+rain,1.0,1.0,1.0,Natural soundscapes & water
+sea_waves,0.875,1.0,1.0,Natural soundscapes & water
+crackling_fire,0.75,1.0,1.0,Natural soundscapes & water
+crickets,0.875,1.0,0.5,Natural soundscapes & water
+chirping_birds,1.0,0.875,1.0,Natural soundscapes & water
+water_drops,0.375,1.0,1.0,Natural soundscapes & water
+wind,0.625,1.0,0.25,Natural soundscapes & water
+pouring_water,1.0,1.0,1.0,Natural soundscapes & water
+toilet_flush,1.0,1.0,1.0,Natural soundscapes & water
+thunderstorm,1.0,1.0,0.875,Natural soundscapes & water
+crying_baby,1.0,1.0,1.0,"Human, non-speech"
+sneezing,0.875,1.0,1.0,"Human, non-speech"
+clapping,0.5,1.0,1.0,"Human, non-speech"
+breathing,0.75,0.875,1.0,"Human, non-speech"
+coughing,1.0,1.0,1.0,"Human, non-speech"
+footsteps,0.875,1.0,0.875,"Human, non-speech"
+laughing,1.0,0.75,0.875,"Human, non-speech"
+brushing_teeth,0.75,1.0,1.0,"Human, non-speech"
+snoring,0.875,1.0,0.875,"Human, non-speech"
+drinking_sipping,0.75,1.0,0.75,"Human, non-speech"
+door_wood_knock,1.0,1.0,1.0,Interior / domestic
+mouse_click,0.875,1.0,1.0,Interior / domestic
+keyboard_typing,0.75,0.875,1.0,Interior / domestic
+door_wood_creaks,0.75,1.0,1.0,Interior / domestic
+can_opening,0.75,0.875,0.875,Interior / domestic
+washing_machine,0.625,1.0,0.5,Interior / domestic
+vacuum_cleaner,0.875,1.0,1.0,Interior / domestic
+clock_alarm,1.0,1.0,1.0,Interior / domestic
+clock_tick,0.875,0.875,0.875,Interior / domestic
+glass_breaking,0.875,1.0,1.0,Interior / domestic
+helicopter,0.375,0.375,0.375,Exterior / urban
+chainsaw,0.875,1.0,1.0,Exterior / urban
+siren,0.75,1.0,1.0,Exterior / urban
+car_horn,0.875,1.0,1.0,Exterior / urban
+engine,0.625,0.875,0.75,Exterior / urban
+train,0.875,1.0,1.0,Exterior / urban
+church_bells,1.0,1.0,1.0,Exterior / urban
+airplane,0.125,1.0,1.0,Exterior / urban
+fireworks,0.5,1.0,1.0,Exterior / urban
+hand_saw,1.0,1.0,1.0,Exterior / urban

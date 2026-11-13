@@ -42,7 +42,7 @@ class Models:
 
         self.device = get_device()
         self.clap, self.extractor, _ = load_clap(self.device)
-        self.scale = float(self.clap.logit_scale_a.exp()) if hasattr(self.clap, "logit_scale_a") else 100.0
+        self.scale = self.clap.logit_scale_a.detach().exp().item() if hasattr(self.clap, "logit_scale_a") else 100.0
 
     def _labels(self, probs):
         return {c.replace("_", " "): float(p) for c, p in zip(self.classes, probs)}

@@ -31,3 +31,8 @@ time,model,params,val_acc,val_macro_f1,test_acc,test_macro_f1
 2026-11-09 08:31:58,cnn_specaug,seed=2 best_epoch=76 params=1185490 train_s=442 cpu_ms=25.8,0.84,0.8329484622704437,,
 2026-11-09 22:29:22,cnn_specaug_mixup,seed=2 best_epoch=75 params=1185490 train_s=328 cpu_ms=66.0,0.8675,0.8664402462003082,,
 2026-11-09 22:32:00,clap_zeroshot,prompt='the sound of a X',0.86,0.8342056913188962,,
+2026-11-13 17:17:09,majority,- FINAL,,,0.02,0.000784313725490196
+2026-11-13 17:17:09,mfcc_logreg,C=0.1 FINAL,,,0.4125,0.38992603818610005
+2026-11-13 17:17:09,cnn_specaug_mixup,seed=0 FINAL (saved best-val checkpoint),,,0.7975,0.779639414421148
+2026-11-13 17:17:09,cnn_specaug_mixup,seed=1 FINAL (saved best-val checkpoint),,,0.8075,0.7981214889341824
+2026-11-13 17:17:09,cnn_specaug_mixup,seed=2 FINAL (saved best-val checkpoint),,,0.8,0.7874146179272036

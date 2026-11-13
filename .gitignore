@@ -2,6 +2,7 @@
 data/*
 # ...but our own recordings are part of the hand-in
 !data/user_samples/
+!data/my_recordings/
 cache/
 __pycache__/
 *.pyc
